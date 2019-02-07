@@ -1,6 +1,8 @@
 import os
-from flask import Flask, render_template, request, flash, redirect
+import subprocess
+from flask import Flask, render_template, request, flash, redirect, send_from_directory
 from werkzeug.utils import secure_filename
+from ufab import run_part
 
 app = Flask(__name__)
 
@@ -23,6 +25,27 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def run(full_filename):
+    save_directory = os.getcwd()
+    os.chdir('/ufab/uFab-kernel/uFab.kernel/builds/bin')
+
+    run_part(full_filename)
+    part_directory, part_filename = os.path.split(full_filename)
+    part_base_name, part_extension = os.path.splitext(part_filename)
+    part_excel = os.path.join(part_directory, part_base_name) + '.xlsx'
+    print(part_directory, part_base_name, part_extension, part_excel)
+
+    os.chdir(save_directory)
+    return part_excel
+
+def process_file(filename):
+    print('Process file', filename)
+    excel_filename = run(filename)
+    part_directory, part_filename = os.path.split(excel_filename)
+    return send_from_directory(part_directory, part_filename)
+    # return render_template('generateplans.html')
+
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -41,7 +64,7 @@ def upload_file():
             tmp_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print('Saving file', tmp_filename)
             file.save(tmp_filename)
-            return render_template('generateplans.html')
+            return process_file(tmp_filename)
         else:
             return 'File type not supported'
     return 'No file.'
