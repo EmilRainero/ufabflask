@@ -29,7 +29,8 @@ def run(full_filename):
     save_directory = os.getcwd()
     os.chdir('/ufab/uFab-kernel/uFab.kernel/builds/bin')
 
-    run_part(full_filename)
+    output_folders = run_part(full_filename)
+    print(output_folders)
     part_directory, part_filename = os.path.split(full_filename)
     part_base_name, part_extension = os.path.splitext(part_filename)
     part_excel = os.path.join(part_directory, part_base_name) + '.xlsx'
@@ -70,4 +71,4 @@ def upload_file():
     return 'No file.'
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=4000)

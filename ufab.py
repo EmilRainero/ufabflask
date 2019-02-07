@@ -339,6 +339,7 @@ def run_kernel(part_full_path_filename, material, query_type, summary_worksheet,
     row_index = row_index + 1
     worksheet.write('A' + str(row_index), 'Query: {0}'.format(settings['Query']), header_format)
     write_all_plans_output(solutions_dict['plans'], worksheet, 'A', row_index, output_folder, context, True)
+    return output_folder
 
 
 def create_header_messages(context, material, messages, part_dimensions, settings):
@@ -497,6 +498,7 @@ def print_stl_file(filename):
 def run_experiment(parts_filenames, materials, query_types, settings, output_folder):
     global workbook, title_format, header_format, cell_format, cell_small_format, column_width
 
+    output_folders = []
     column_width = 120
     for part in parts_filenames:
         # print(part)
@@ -524,12 +526,14 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
 
             column_index = 'A'
             for query_type in query_types:
-                run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
+                output_folder = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
                            write_part_summary, column_index)
+                output_folders.append(output_folder)
                 write_part_summary = False
                 column_index = chr(ord(column_index) + 1)
 
         workbook.close()
+    return output_folders
 
 
 # arguments = sys.argv[1:]
@@ -627,6 +631,6 @@ settings = {
 }
 
 def run_part(part_filename):
-    run_experiment([part_filename], [materials[0]], ['json'], {}, '/tmp')
+    return run_experiment([part_filename], [materials[0]], ['json'], {}, '/tmp')
 
 # run_experiment(parts_filenames, materials, query_types, settings)
