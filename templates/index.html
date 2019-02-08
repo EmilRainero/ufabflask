@@ -7,15 +7,17 @@
     </tr>
 </table>
 
-<br>Material:
- <select>
-  <option value="volvo">Volvo</option>
-  <option value="saab">Saab</option>
-  <option value="mercedes">Mercedes</option>
-  <option value="audi">Audi</option>
-</select>
-<br><br>
+
 <form action="upload" method="POST" enctype="multipart/form-data">
+    <br>Material:
+    <select name="material">
+        <option value="N">Aluminum N1.2.Z.AG</option>
+        <option value="H">Tool Steel H1.1.Z.HA</option>
+        <option value="K">Cast Iron K3.2.C.UT</option>
+        <option value="M">Stainless Steel M1.0.Z.AQ</option>
+        <option value="P">Steel P1.1.Z.AN</option>
+    </select>
+    <br><br>
     STEP File:&nbsp;
     <input type="file" name="file"/><br>
     <input type="hidden" name="command" value="preview" />
