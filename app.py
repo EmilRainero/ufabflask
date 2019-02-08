@@ -1,10 +1,11 @@
 import os
-import subprocess
-from flask import Flask, render_template, request, flash, redirect, send_from_directory
+from flask import Flask, render_template, request, flash, redirect, send_from_directory, session
 from werkzeug.utils import secure_filename
-from ufab import run_part
+from ufab import run_part, generate_html
 
 app = Flask(__name__)
+app.secret_key = 'super_secret_key'
+app.debug = True
 
 UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -14,6 +15,17 @@ ALLOWED_EXTENSIONS = set(['step', 'stp'])
 @app.route('/')
 def hello_world(name=None):
     return render_template('index.html', name=name)
+
+@app.route('/file/<directory>/<name>')
+def get_file(directory, name):
+    print('get_file', directory, name)
+    full_directory_path = os.path.join('/tmp', 'ufab', 'output', directory)
+    print(full_directory_path, name)
+    return send_from_directory(full_directory_path, name)
+
+@app.route('/preview/<directory>/<name>')
+def preview_file(directory, name):
+    return 'Preview ' + directory + ' ' + name
 
 @app.route('/hello/')
 @app.route('/hello/<name>')
@@ -29,7 +41,7 @@ def run(full_filename):
     save_directory = os.getcwd()
     os.chdir('/ufab/uFab-kernel/uFab.kernel/builds/bin')
 
-    output_folders = run_part(full_filename)
+    output_folders, plans_output = run_part(full_filename)
     print(output_folders)
     part_directory, part_filename = os.path.split(full_filename)
     part_base_name, part_extension = os.path.splitext(part_filename)
@@ -37,14 +49,22 @@ def run(full_filename):
     print(part_directory, part_base_name, part_extension, part_excel)
 
     os.chdir(save_directory)
-    return part_excel
+    return part_excel, output_folders[0], plans_output
 
-def process_file(filename):
-    print('Process file', filename)
-    excel_filename = run(filename)
+def generate_preview(output_folder, plans_output):
+    print('Preview', output_folder)
+    html = generate_html(output_folder, plans_output)
+    # print(html)
+    return html
+
+def process_file(filename, command):
+    excel_filename, output_folder, plans_output = run(filename)
     part_directory, part_filename = os.path.split(excel_filename)
-    return send_from_directory(part_directory, part_filename)
-    # return render_template('generateplans.html')
+    session['part_filename'] = part_filename
+    if command == 'excel':
+        return send_from_directory(part_directory, part_filename)
+    else:
+        return generate_preview(output_folder, plans_output)
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -53,7 +73,7 @@ def upload_file():
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
-
+        command = request.form['command']
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
@@ -63,12 +83,14 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             tmp_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            print('Saving file', tmp_filename)
+            # print('Saving file', tmp_filename)
             file.save(tmp_filename)
-            return process_file(tmp_filename)
+            return process_file(tmp_filename, command)
         else:
             return 'File type not supported'
     return 'No file.'
 
 if __name__ == '__main__':
+    app.secret_key = 'super_secret_key'
+    app.debug = True
     app.run(port=4000)

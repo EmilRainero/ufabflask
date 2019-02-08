@@ -8,7 +8,7 @@ import xlsxwriter
 import subprocess
 import re
 import struct
-
+from html import escape
 
 def parse_arguments(arguments):
     parser = argparse.ArgumentParser()
@@ -107,9 +107,11 @@ def write_plan_output(plans, plan_number, worksheet, column, row_index, output_f
     last_tool = plan['stages'][0]['steps'][0]['toolName']
     setup_times = 0
     operation_times = 0
+    stages_output = []
     for stage in plan['stages']:
-        row_index, last_tool, stage_info = write_stage_output(column, plan, row_index, stage, stage_number, worksheet,
+        row_index, last_tool, stage_info, stage_output = write_stage_output(column, plan, row_index, stage, stage_number, worksheet,
                                                               output_folder, last_tool, context, detailed)
+        stages_output.append(stage_output)
         setup_times = setup_times + stage_info['SetupTime']
         operation_times = operation_times + stage_info['OperationTime']
         stage_number = stage_number + 1
@@ -134,7 +136,8 @@ def write_plan_output(plans, plan_number, worksheet, column, row_index, output_f
     )
     worksheet.write(column + str(orig_row_index - 1), data, header_format)
 
-    return row_index
+    plan_output = [data] + stages_output
+    return row_index, plan_output
 
 
 def calculate_stage_time(setup_time, tool_change_time, stage, last_tool):
@@ -172,9 +175,11 @@ def write_stage_output(column, plan, row_index, stage, stage_number, worksheet, 
     worksheet.write(column + str(row_index), data, cell_format)
     row_index = row_index + 1
     stepNumber = 1
+    steps_output = []
     for step in stage['steps']:
-        row_index, step_info = write_step_output(column, row_index, step, stepNumber, worksheet, output_folder,
+        row_index, step_info, step_output = write_step_output(column, row_index, step, stepNumber, worksheet, output_folder,
                                                  detailed)
+        steps_output.append(step_output)
         stepNumber = stepNumber + 1
 
     stage_info = {
@@ -182,8 +187,9 @@ def write_stage_output(column, plan, row_index, stage, stage_number, worksheet, 
         'SetupTime': setup_time,
         'OperationTime': load_unload_time + stages_time + tool_changes_time
     }
+    stage_output = [data] + steps_output
     # return row_index, last_tool, setup_time, (load_unload_time + stages_time + tool_changes_time)
-    return row_index, last_tool, stage_info
+    return row_index, last_tool, stage_info, stage_output
 
 
 def write_step_output(column, row_index, step, step_number, worksheet, output_folder, detailed):
@@ -205,12 +211,15 @@ def write_step_output(column, row_index, step, step_number, worksheet, output_fo
             round(step['area'] * 10000 * 100, 3),
             step['description'],
             step['toolName'])
+
+    output = [data]
     if detailed:
         scale = 4
         worksheet.write(column + str(row_index), data, cell_format)
         row_index = row_index + 1
         worksheet.set_row(row_index - 1, 10 + 60 * scale)
         worksheet.write(column + str(row_index), '            ' + results, cell_small_format)
+        output.append(results)
         worksheet.insert_image(column + str(row_index),
                                os.path.join(output_folder, step['Image:']),
                                {'x_offset': 45, 'y_offset': 20, 'x_scale': 0.25 * scale, 'y_scale': 0.25 * scale})
@@ -222,13 +231,15 @@ def write_step_output(column, row_index, step, step_number, worksheet, output_fo
         'Time': minutes_to_seconds(step['time']),
         'Cost': step['cost']['operation']
     }
-    return row_index, step_info
+    return row_index, step_info, output
 
 
 def write_all_plans_output(plans, worksheet, column, row_index, output_folder, context, detailed):
+    plans_output = []
     for plan_index in range(0, len(plans)):
-        row_index = write_plan_output(plans, plan_index, worksheet, column, row_index, output_folder, context, detailed)
-    return row_index
+        row_index, plan_output = write_plan_output(plans, plan_index, worksheet, column, row_index, output_folder, context, detailed)
+        plans_output.append(plan_output)
+    return plans_output
 
 
 def parse_output_bounding_box(output):
@@ -338,8 +349,8 @@ def run_kernel(part_full_path_filename, material, query_type, summary_worksheet,
     row_index = write_worksheet_header(worksheet, title, messages)
     row_index = row_index + 1
     worksheet.write('A' + str(row_index), 'Query: {0}'.format(settings['Query']), header_format)
-    write_all_plans_output(solutions_dict['plans'], worksheet, 'A', row_index, output_folder, context, True)
-    return output_folder
+    plans_output = write_all_plans_output(solutions_dict['plans'], worksheet, 'A', row_index, output_folder, context, True)
+    return output_folder, plans_output
 
 
 def create_header_messages(context, material, messages, part_dimensions, settings):
@@ -387,13 +398,13 @@ def execute_runKernel(material, material_type, output_folder, part_base_name, pa
     print
     ' '.join(command)
     print
-    print('Running part "{0}" with material "{1}" with query "{2}"'.format(part_base_name, material['tabname'],
-                                                                           query_type))
+    # print('Running part "{0}" with material "{1}" with query "{2}"'.format(part_base_name, material['tabname'],
+    #                                                                        query_type))
 
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     exitcode = proc.returncode
-    print(out[:-1])  # strip off last CR
+    # print(out[:-1])  # strip off last CR
 
     if exitcode < 0:
         print('************ Exit code: {0}'.format(exitcode))
@@ -506,7 +517,7 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
         part_base_name, part_extension = os.path.splitext(part_filename)
         excel_filename = os.path.join(output_folder, '{}.xlsx'.format(part_base_name))
 
-        print('\n************ Writing to {0}'.format(excel_filename))
+        # print('\n************ Writing to {0}'.format(excel_filename))
 
         workbook = xlsxwriter.Workbook(excel_filename)
         title_format = workbook.add_format({'bold': True, 'font_size': 20, 'align': 'top'})
@@ -526,14 +537,23 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
 
             column_index = 'A'
             for query_type in query_types:
-                output_folder = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
+                output_folder, plans_output = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
                            write_part_summary, column_index)
+                # for plan in plans_output:
+                #     print(plan[0].strip())
+                #     for i in range(1, len(plan)):
+                #         stage = plan[i]
+                #         print(stage[0].strip())
+                #         for j in range(1, len(stage)):
+                #             step = stage[j]
+                #             for item in step:
+                #                 print(item.strip())
                 output_folders.append(output_folder)
                 write_part_summary = False
                 column_index = chr(ord(column_index) + 1)
 
         workbook.close()
-    return output_folders
+    return output_folders, plans_output
 
 
 # arguments = sys.argv[1:]
@@ -634,3 +654,73 @@ def run_part(part_filename):
     return run_experiment([part_filename], [materials[0]], ['json'], {}, '/tmp')
 
 # run_experiment(parts_filenames, materials, query_types, settings)
+
+
+def html_header():
+    return '''
+<!DOCTYPE html>
+<html>
+<body>'''
+
+def html_footer():
+    return '''
+</body>
+</html>'''
+
+def html_summary(folder):
+    html = '<h1>Part ' + folder + '</h1>'
+    url = "file/" + folder + '/' + 'end.png'
+    html = html + '<img src="' + url + '" >\n'
+    return html
+
+def html_space(n):
+    html = ''
+    for i in range(0, n):
+        html = html + '&nbsp;'
+    return html
+
+def html_step(folder, step, step_output):
+    html = '<p style="font-size:80%;">' + html_space(8) + escape(step_output[0].strip()) + '</p>'
+    if len(step_output) > 1:
+        html = html + '<p style="font-size:80%;">' + html_space(12) + step_output[1].strip() + '</p>'
+    step_image = step['Image:']
+    step_remaining_volue = step['Remaining volume STL file:']
+    step_removal_volue = step['Removal volume STL file:']
+    url = "file/" + folder + '/' + step_image
+    html = html + '<img src="' + url + '" >'
+    url = "preview/" + folder + '/' + step_removal_volue
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Removal Volume</a>'
+    url = "preview/" + folder + '/' + step_remaining_volue
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Remaining Volume</a>'
+    return html
+
+def html_stage(folder, stage, stage_output):
+    html = '<p style="font-size:90%;">' + html_space(4) + stage_output[0].strip() + '</p>\n'
+    stepIndex = 0
+    for step in stage['steps']:
+        html = html + html_step(folder, step, stage_output[stepIndex + 1])
+        stepIndex = stepIndex + 1
+    return html
+
+def html_plan(folder, plan, plan_output):
+    html = '<p style="font-size:110%;">' + plan_output[0].strip() + '</p>\n'
+    stageIndex = 0
+    for stage in plan['stages']:
+        html = html + html_stage(folder, stage, plan_output[stageIndex + 1])
+        stageIndex = stageIndex + 1
+    return html
+
+def generate_html(folder, plans_output):
+    solutions_file = os.path.join(folder, 'solutions.json')
+    folder_basename = os.path.basename(folder)
+    with open(solutions_file) as json_file:
+        data = json.load(json_file)
+        html = html_header()
+        html = html + html_summary(folder_basename)
+        if data['validPlanExists']:
+            planIndex = 0
+            for plan in data['plans']:
+                html = html + html_plan(folder_basename, plan, plans_output[planIndex])
+                planIndex = planIndex + 1
+        html = html + html_footer()
+        return html

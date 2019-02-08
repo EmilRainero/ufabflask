@@ -2,11 +2,30 @@
 <body>
 <h1>uFab Kernel</h1>
 <br>
-<form action="upload" method="POST"
-      enctype="multipart/form-data">
-    STEP File:<br>
-    <input type="file" name="file"/><br>
-    <input type="submit" value="Generate Plans"/>
-</form>
+<table>
+    <tr>
+        <td>
+            <h2>Generate Excel</h2>
+            <form action="upload" method="POST"
+                  enctype="multipart/form-data">
+                STEP File:<br>
+                <input type="file" name="file"/><br>
+                <input type="hidden" name="command" value="excel" />
+                <input type="submit" value="Generate Excel"/>
+            </form>
+        </td>
+        <td>
+            <h2>Generate Preview</h2>
+            <form action="upload" method="POST"
+                  enctype="multipart/form-data">
+                STEP File:<br>
+                <input type="file" name="file"/><br>
+                <input type="hidden" name="command" value="preview" />
+                <input type="submit" value="Generate Preview"/>
+            </form>
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>
