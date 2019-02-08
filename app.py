@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, flash, redirect, send_from_directory, session
 from werkzeug.utils import secure_filename
-from ufab import run_part, generate_html
+from ufab import run_part, generate_html, materials
 from shutil import copyfile
 
 app = Flask(__name__)
@@ -29,9 +29,10 @@ def preview_file(directory, name):
     return 'Preview ' + directory + ' ' + name
 
 @app.route('/hello/')
-@app.route('/hello/<name>')
-def hello(name=None):
-    return render_template('index.html', name=name)
+def hello():
+    for material in materials:
+        print(material['tabname'])
+    return 'Hello'
 
 
 def allowed_file(filename):

@@ -1,31 +1,26 @@
 <html>
 <body>
-<h1>uFab Kernel</h1>
-<br>
 <table>
     <tr>
-        <td>
-            <h2>Generate Excel</h2>
-            <form action="upload" method="POST"
-                  enctype="multipart/form-data">
-                STEP File:<br>
-                <input type="file" name="file"/><br>
-                <input type="hidden" name="command" value="excel" />
-                <input type="submit" value="Generate Excel"/>
-            </form>
-        </td>
-        <td>
-            <h2>Generate Preview</h2>
-            <form action="upload" method="POST"
-                  enctype="multipart/form-data">
-                STEP File:<br>
-                <input type="file" name="file"/><br>
-                <input type="hidden" name="command" value="preview" />
-                <input type="submit" value="Generate Preview"/>
-            </form>
-        </td>
+        <td style="width:50px; height:80px"><img src="static/ufab.png" width="80%"></td>
+        <td style="width:250px" valign="bottom"><h1>uFab Kernel</h1></td>
     </tr>
 </table>
 
+<br>Material:
+ <select>
+  <option value="volvo">Volvo</option>
+  <option value="saab">Saab</option>
+  <option value="mercedes">Mercedes</option>
+  <option value="audi">Audi</option>
+</select>
+<br><br>
+<form action="upload" method="POST" enctype="multipart/form-data">
+    STEP File:&nbsp;
+    <input type="file" name="file"/><br>
+    <input type="hidden" name="command" value="preview" />
+    <br>
+    <input type="submit" value="Run planner"/>
+</form>
 </body>
 </html>
