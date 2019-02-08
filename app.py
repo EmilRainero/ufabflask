@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, flash, redirect, send_from_directory, session
 from werkzeug.utils import secure_filename
 from ufab import run_part, generate_html
+from shutil import copyfile
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key'
@@ -51,9 +52,9 @@ def run(full_filename):
     os.chdir(save_directory)
     return part_excel, output_folders[0], plans_output
 
-def generate_preview(output_folder, plans_output):
+def generate_preview(output_folder, plans_output, excel_filename):
     print('Preview', output_folder)
-    html = generate_html(output_folder, plans_output)
+    html = generate_html(output_folder, plans_output, excel_filename)
     # print(html)
     return html
 
@@ -64,7 +65,11 @@ def process_file(filename, command):
     if command == 'excel':
         return send_from_directory(part_directory, part_filename)
     else:
-        return generate_preview(output_folder, plans_output)
+        # copy file from excel_filensame to directory output_folder
+        excel_basename = os.path.basename(excel_filename)
+        destination_filename = os.path.join(output_folder, excel_basename)
+        copyfile(excel_filename, destination_filename)
+        return generate_preview(output_folder, plans_output, excel_basename)
 
 
 @app.route('/upload', methods=['GET', 'POST'])

@@ -667,10 +667,12 @@ def html_footer():
 </body>
 </html>'''
 
-def html_summary(folder):
+def html_summary(folder, excel_filename):
     html = '<h1>Part ' + folder + '</h1>'
     url = "file/" + folder + '/' + 'end.png'
     html = html + '<img src="' + url + '" >\n'
+    url = "file/" + folder + '/' + excel_filename
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" >Download Excel</a>'
     return html
 
 def html_space(n):
@@ -710,13 +712,13 @@ def html_plan(folder, plan, plan_output):
         stageIndex = stageIndex + 1
     return html
 
-def generate_html(folder, plans_output):
+def generate_html(folder, plans_output, excel_filename):
     solutions_file = os.path.join(folder, 'solutions.json')
     folder_basename = os.path.basename(folder)
     with open(solutions_file) as json_file:
         data = json.load(json_file)
         html = html_header()
-        html = html + html_summary(folder_basename)
+        html = html + html_summary(folder_basename, excel_filename)
         if data['validPlanExists']:
             planIndex = 0
             for plan in data['plans']:
