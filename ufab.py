@@ -650,11 +650,11 @@ query_types = [
 settings = {
 }
 
-def run_part(part_filename, material_requested):
+def run_part(part_filename, material_requested, query):
     for material in materials:
         if material['type'] == material_requested:
             material_input = [material]
-    return run_experiment([part_filename], material_input, ['json'], {}, '/tmp')
+    return run_experiment([part_filename], material_input, [query], {}, '/tmp')
 
 # run_experiment(parts_filenames, materials, query_types, settings)
 

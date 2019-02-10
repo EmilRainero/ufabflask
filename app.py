@@ -37,11 +37,11 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def run(full_filename, material):
+def run(full_filename, material, query):
     save_directory = os.getcwd()
     os.chdir('/ufab/uFab-kernel/uFab.kernel/buildsOptimized/bin')
 
-    output_folders, plans_output = run_part(full_filename, material)
+    output_folders, plans_output = run_part(full_filename, material, query)
     part_directory, part_filename = os.path.split(full_filename)
     part_base_name, part_extension = os.path.splitext(part_filename)
     part_excel = os.path.join(part_directory, part_base_name) + '.xlsx'
@@ -53,8 +53,8 @@ def generate_preview(output_folder, plans_output, excel_filename):
     html = generate_html(output_folder, plans_output, excel_filename)
     return html
 
-def process_file(filename, command, material):
-    excel_filename, output_folder, plans_output = run(filename, material)
+def process_file(filename, command, material, query):
+    excel_filename, output_folder, plans_output = run(filename, material, query)
     part_directory, part_filename = os.path.split(excel_filename)
     session['part_filename'] = part_filename
     if command == 'excel':
@@ -75,6 +75,7 @@ def upload_file():
             return redirect(request.url)
         command = request.form['command']
         material = request.form['material']
+        query = request.form['query']
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
@@ -85,7 +86,7 @@ def upload_file():
             filename = secure_filename(file.filename)
             tmp_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(tmp_filename)
-            return process_file(tmp_filename, command, material)
+            return process_file(tmp_filename, command, material, query)
         else:
             return 'File type not supported'
     return 'No file.'
