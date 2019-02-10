@@ -674,6 +674,10 @@ def html_summary(folder, excel_filename):
     html = '<h1>Part ' + folder + '</h1>'
     url = "file/" + folder + '/' + 'end.png'
     html = html + '<img src="' + url + '" >\n'
+
+    url = "preview/" + folder + '/' + 'voxpart.stl'
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Preview</a>'
+
     url = "file/" + folder + '/' + excel_filename
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" >Download Excel</a>'
     return html

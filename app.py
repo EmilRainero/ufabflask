@@ -24,7 +24,9 @@ def get_file(directory, name):
 
 @app.route('/preview/<directory>/<name>')
 def preview_file(directory, name):
-    return 'Preview ' + directory + ' ' + name
+    # return 'Preview ' + directory + ' ' + name
+    url = '/file/{0}/{1}'.format(directory, name)
+    return render_template('ufab.html', url=url)
 
 @app.route('/hello/')
 def hello():
@@ -37,7 +39,7 @@ def allowed_file(filename):
 
 def run(full_filename, material):
     save_directory = os.getcwd()
-    os.chdir('/ufab/uFab-kernel/uFab.kernel/builds/bin')
+    os.chdir('/ufab/uFab-kernel/uFab.kernel/buildsOptimized/bin')
 
     output_folders, plans_output = run_part(full_filename, material)
     part_directory, part_filename = os.path.split(full_filename)
