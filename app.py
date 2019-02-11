@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, flash, redirect, send_from_di
 from werkzeug.utils import secure_filename
 from ufab import run_part, generate_html, materials
 from shutil import copyfile
+from threading import Lock
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key'
@@ -12,6 +13,7 @@ UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = set(['step', 'stp'])
 
+lock = Lock()
 
 @app.route('/')
 def hello_world(name=None):
@@ -38,6 +40,9 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def run(full_filename, material, query):
+    print('acquiring lock')
+    lock.acquire()
+    print('got lock')
     save_directory = os.getcwd()
     os.chdir('/ufab/uFab-kernel/uFab.kernel/buildsOptimized/bin')
 
@@ -47,6 +52,8 @@ def run(full_filename, material, query):
     part_excel = os.path.join(part_directory, part_base_name) + '.xlsx'
 
     os.chdir(save_directory)
+    print('releasing lock')
+    lock.release()
     return part_excel, output_folders[0], plans_output
 
 def generate_preview(output_folder, plans_output, excel_filename):
