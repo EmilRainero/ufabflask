@@ -279,7 +279,8 @@ def parse_output(output):
     result = {
         'BoundingBox': bounding_box_root,
         'Material': material_root,
-        'Machine': machine_root
+        'Machine': machine_root,
+        'Output': output
     }
     return result
 
@@ -293,7 +294,7 @@ def compute_part_dimensions(boundingBox):
 
 
 def run_kernel(part_full_path_filename, material, query_type, summary_worksheet, comparison_worksheet,
-               settings, write_part_summary, column_index):
+               settings, write_part_summary, column_index, machine_filename):
     settings['Query'] = query_type.upper()
     settings['PartFullPathFilename'] = part_full_path_filename
     settings['PartDirectory'], settings['PartFilename'] = os.path.split(part_full_path_filename)
@@ -306,7 +307,7 @@ def run_kernel(part_full_path_filename, material, query_type, summary_worksheet,
 
     context = execute_runKernel(material, material['type'], output_folder, settings['PartName'],
                                 part_full_path_filename,
-                                settings['Query'])
+                                settings['Query'], machine_filename)
     if context == None:
         return
 
@@ -350,7 +351,7 @@ def run_kernel(part_full_path_filename, material, query_type, summary_worksheet,
     row_index = row_index + 1
     worksheet.write('A' + str(row_index), 'Query: {0}'.format(settings['Query']), header_format)
     plans_output = write_all_plans_output(solutions_dict['plans'], worksheet, 'A', row_index, output_folder, context, True)
-    return output_folder, plans_output
+    return output_folder, plans_output, context
 
 
 def create_header_messages(context, material, messages, part_dimensions, settings):
@@ -386,18 +387,19 @@ def write_worksheet_header(worksheet, title, messages):
     return row_index - 1
 
 
-def execute_runKernel(material, material_type, output_folder, part_base_name, part_full_path_filename, query_type):
+def execute_runKernel(material, material_type, output_folder, part_base_name, part_full_path_filename, query_type,
+                      machine_filename):
     if (query_type.lower() == 'formula'):
         command = ['./runKernel', '-i', part_full_path_filename, '-f', output_folder, '-q', query_type.lower(),
                    '-m', material['code']]
     else:
         command = ['./runKernel', '-i', part_full_path_filename, '-f', output_folder, '-q', query_type.lower(),
-                   '-m', material_type]
+                   '-m', material_type
+            , '--machine', machine_filename
+                   ]
     command = prefix_command() + command
     # command = command + ['--tools', 'add']
-    print
-    ' '.join(command)
-    print
+    print(' '.join(command))
     # print('Running part "{0}" with material "{1}" with query "{2}"'.format(part_base_name, material['tabname'],
     #                                                                        query_type))
 
@@ -506,7 +508,7 @@ def print_stl_file(filename):
     minX, maxX, minY, maxY, minZ, maxZ
 
 
-def run_experiment(parts_filenames, materials, query_types, settings, output_folder):
+def run_experiment(parts_filenames, materials, query_types, settings, output_folder, machine_filename):
     global workbook, title_format, header_format, cell_format, cell_small_format, column_width
 
     output_folders = []
@@ -537,8 +539,8 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
 
             column_index = 'A'
             for query_type in query_types:
-                output_folder, plans_output = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
-                           write_part_summary, column_index)
+                output_folder, plans_output, context = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
+                           write_part_summary, column_index, machine_filename)
                 # for plan in plans_output:
                 #     print(plan[0].strip())
                 #     for i in range(1, len(plan)):
@@ -548,7 +550,7 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
                 #             step = stage[j]
                 #             for item in step:
                 #                 print(item.strip())
-                output_folders.append(output_folder)
+                output_folders.append([output_folder, context])
                 write_part_summary = False
                 column_index = chr(ord(column_index) + 1)
 
@@ -650,11 +652,11 @@ query_types = [
 settings = {
 }
 
-def run_part(part_filename, material_requested, query):
+def run_part(part_filename, material_requested, query, machine_filename):
     for material in materials:
         if material['type'] == material_requested:
             material_input = [material]
-    return run_experiment([part_filename], material_input, [query], {}, '/tmp')
+    return run_experiment([part_filename], material_input, [query], {}, '/tmp', machine_filename)
 
 # run_experiment(parts_filenames, materials, query_types, settings)
 
@@ -674,6 +676,9 @@ def html_summary(folder, excel_filename):
     html = '<h1>Part ' + folder + '</h1>'
     url = "file/" + folder + '/' + 'end.png'
     html = html + '<img src="' + url + '" >\n'
+
+    url = "file/" + folder + '/' + 'output.txt'
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Output</a>'
 
     url = "preview/" + folder + '/' + 'voxpart.stl'
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Preview</a>'
@@ -733,3 +738,23 @@ def generate_html(folder, plans_output, excel_filename):
                 planIndex = planIndex + 1
         html = html + html_footer()
         return html
+
+def make_medium_machine_json(billing_rate=100, stage_time_minutes=30, load_unload_time_seconds=120,
+                      tool_change_time_seconds=4.2, dimensions_x_mm=10000, dimensions_y_mm=10000, dimensions_z_mm=10000):
+    result = [
+        {
+            'type': 'Mill3D',
+            'modelId(String)': 'Multitask 01 - Medium (8-12\" chuck)',
+            'billingRate($/hr)': float(billing_rate),
+            'stageTime': float(stage_time_minutes),
+            'loadUnloadTime': float(load_unload_time_seconds),
+            'tct': float(tool_change_time_seconds),
+            'axisTravelXAxis(mm)': float(dimensions_x_mm),
+            'axisTravelYAxis(mm)': float(dimensions_y_mm),
+            'axisTravelZAxis(mm)': float(dimensions_z_mm),
+            'rpm': 1,
+            'spindlePowerRating(hp)': 1
+        }
+    ]
+
+    return result

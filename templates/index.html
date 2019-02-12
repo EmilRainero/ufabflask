@@ -1,4 +1,9 @@
 <html>
+<style type="text/css">
+    .fieldset-auto-width {
+         display: inline-block;
+    }
+</style>
 <body>
 <table>
     <tr>
@@ -6,6 +11,7 @@
         <td style="width:250px" valign="bottom"><h1>uFab Kernel</h1></td>
     </tr>
 </table>
+
 
 
 <form action="upload" method="POST" enctype="multipart/form-data">
@@ -28,6 +34,19 @@
     <input type="file" name="file"/><br>
     <input type="hidden" name="command" value="preview" />
     <br>
+    <fieldset class="fieldset-auto-width">
+        <legend>Machine Settings:</legend>
+        <table>
+            <tr><td>Billing rate ($):</td><td><input type="text" name="billing_rate" value="100" size="5" ></td></tr>
+            <tr><td>Stage Time (min.):</td><td><input type="text" name="stage_time" value="30" size="5" ></td></tr>
+            <tr><td>Load/Unload Time (sec.):</td><td><input type="text" name="load_unload_time" value="120" size="5" ></td></tr>
+            <tr><td>Tool Change Time (sec.):</td><td><input type="text" name="tool_change_time" value="4.2" size="5" ></td></tr>
+            <tr><td>Dimensions X (mm):</td><td><input type="text" name="dimensions_x" value="10000" size="5" ></td></tr>
+            <tr><td>Dimensions Y (mm):</td><td><input type="text" name="dimensions_y" value="10000" size="5" ></td></tr>
+            <tr><td>Dimensions Z (mm):</td><td><input type="text" name="dimensions_z" value="10000" size="5" ></td></tr>
+        </table>
+    </fieldset>
+    <br><br>
     <input type="submit" value="Run planner"/>
 </form>
 </body>
