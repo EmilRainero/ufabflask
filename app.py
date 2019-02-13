@@ -2,7 +2,7 @@ import os
 import re
 from flask import Flask, render_template, request, flash, redirect, send_from_directory, session
 from werkzeug.utils import secure_filename
-from ufab import run_part, generate_html, make_medium_machine_json
+from ufab import run_part, generate_html, make_medium_machine_json, process_request_response
 from shutil import copyfile
 from threading import Lock
 from tempfile import mkstemp
@@ -45,7 +45,7 @@ def allowed_file(filename):
 
 def run(full_filename, material, query, machine_filename):
     global job_id
-    print('JOBID:', job_id)
+    # print('JOBID:', job_id)
     job_id = job_id + 1
 
     # print('acquiring lock')
@@ -72,6 +72,10 @@ def run(full_filename, material, query, machine_filename):
     output_filename = os.path.join(output_folder, 'output.txt')
     with open(output_filename, 'w') as file:
         file.write(output_text)
+    # data = process_request_response(output_filename)
+    # output_filename = os.path.join(output_folder, 'request_response.txt')
+    # with open(output_filename, 'w') as file:
+    #     file.write(data)
 
     return part_excel, output_folder, plans_output
 
@@ -90,6 +94,7 @@ def process_file(filename, command, material, query, machine_filename):
         excel_basename = os.path.basename(excel_filename)
         destination_filename = os.path.join(output_folder, excel_basename)
         copyfile(excel_filename, destination_filename)
+
         return generate_preview(output_folder, plans_output, excel_basename)
 
 
@@ -123,13 +128,13 @@ def upload_file():
             file.save(tmp_filename)
 
             machine = make_medium_machine_json(billing_rate, stage_time, load_unload_time, tool_change_time, dimensions_x, dimensions_y, dimensions_z)
-            print(machine)
+            # print(machine)
 
             fd, machine_filename = mkstemp(prefix="machine-", suffix='.json', dir='/tmp', text=True)
-            print(machine_filename)
+            # print(machine_filename)
             file = open(machine_filename, 'w')
             machine_json = json.dumps(machine, sort_keys=True, indent=4)
-            print(machine_json)
+            # print(machine_json)
             file.write(machine_json)
             file.close()
             os.close(fd)

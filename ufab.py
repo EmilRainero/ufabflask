@@ -679,6 +679,9 @@ def html_summary(folder, excel_filename):
     url = "file/" + folder + '/' + 'output.txt'
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Output</a>'
 
+    # url = "file/" + folder + '/' + 'request_response.txt'
+    # html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Request/Response</a>'
+
     url = "preview/" + folder + '/' + 'voxpart.stl'
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Preview</a>'
 
@@ -757,3 +760,160 @@ def make_medium_machine_json(billing_rate=100, stage_time_minutes=30, load_unloa
     ]
 
     return result
+
+def pad_string(s, n, padding):
+    while len(s) < n:
+        s = s + padding
+    return s
+
+def match_timestamp_line(line):
+    return re.search('^\d\d\d\d', line) != None
+
+def process_request_response(filename):
+    with open(filename) as file:
+        data = file.read()
+        lines = data.splitlines()
+        results = []
+
+        i = 0
+        results = []
+        while i < len(lines):
+            line = lines[i]
+            if match_timestamp_line(line):
+                if re.search('Query Request:', line) != None:
+                    i = process_request(i, line, lines, results)
+                if re.search('Query Response:', line) != None:
+                    i, response = process_response(i, line, lines, results)
+            i = i + 1
+
+    output = ''
+    for entry in results:
+        # print(entry['DateTime'], entry['Type'])
+        output = output + '{0} {1}'.format(entry['DateTime'], entry['Type']) + '\n'
+        if entry['Type'] == 'Request':
+            # print(json.dumps(entry['JSON'], sort_keys=True, indent=4))
+            output = output + json.dumps(entry['JSON'], sort_keys=True, indent=4) + '\n'
+        else:
+            # print('\n'.join(entry['Tools']))
+            # print(json.dumps(entry['Tools'], sort_keys=True, indent=4))
+            output = output + json.dumps(entry['Tools'], sort_keys=True, indent=4) + '\n'
+
+    return output
+
+def process_tool(tool):
+    # print(json.dumps(tool, sort_keys=True, indent=4))
+    tool_details = ''
+    cutting_data = tool['cuttingData']
+
+    if 'toolType' in tool:
+        tool_details = tool_details + '{0}, '.format(tool['toolType'])
+    elif 'OperationTypeName' in cutting_data:
+        tool_details = tool_details + '{0}, '.format(cutting_data['OperationTypeName'])
+    elif 'call' in tool:
+        tool_details = tool_details + '{0}, '.format(tool['call'])
+
+    if 'diameter' in tool:
+        tool_details = tool_details + 'Diameter {0}, '.format(tool['diameter'])
+    if 'depthMax' in tool:
+        tool_details = tool_details + 'Depth {0}, '.format(tool['depthMax'])
+
+    results = cutting_data['Results']
+    if 'MillingResultElement' in results:
+        milling_result_element = results['MillingResultElement']
+        if isinstance(milling_result_element, dict):
+            if 'Qq' in milling_result_element:
+                tool_details = tool_details + 'Qq {0}, '.format(milling_result_element['Qq'])
+        if isinstance(milling_result_element, list):
+            for element in milling_result_element:
+                tool_details = tool_details + element['StrategyStep'] + ' '
+                if 'Vf' in element:
+                    tool_details = tool_details + 'Vf {0}' .format(element['Vf'])
+                elif 'Vfm' in element:
+                    tool_details = tool_details + 'Vfm {0} '.format(element['Vfm'])
+                tool_details = tool_details + ', '
+    return tool_details[:-3]
+
+def process_array_of_tools(tools):
+    result = []
+    for tool in tools:
+        result.append(process_tool(tool))
+    return result
+
+def process_response(i, line, lines, results):
+    response = line + '\n'
+    i = i + 1
+    while not match_timestamp_line(lines[i]):
+        line = lines[i]
+        response = response + lines[i] + '\n'
+        if re.search('Query Response', line) != None or re.search('Query Request', line) != None:
+            print(line)
+        i = i + 1
+    # print(response)
+    response = response.strip()
+    if response.endswith(')'):
+        response = response[:-1]
+    response = response + '\n'
+
+    matches = re.findall('^(.+?) \[.+REPORTING] Query Response: ((.*\n)*)', response,
+                         re.MULTILINE)
+    match = matches[0]
+    json_data = None
+    try:
+        json_data = json.loads(match[1])
+    except:
+        print('Bad data', match[1])
+
+    entry = {
+        'Text': response,
+        'DateTime': match[0],
+        'Type': 'Response',
+        'JSON': json_data
+    }
+    # print(entry['Text'])
+    if isinstance(entry['JSON'], list):
+        entry['Tools'] = process_array_of_tools(entry['JSON'])
+    else:
+        entry['Tools'] = []
+    results.append(entry)
+    i = i - 1
+    return i, response
+
+
+def process_request(i, line, lines, results):
+    request = line + '\n'
+    i = i + 1
+    while not match_timestamp_line(lines[i]):
+        request = request + lines[i] + '\n'
+        if re.search('Query Response', lines[i]) != None or re.search('Query Request', lines[i]) != None:
+            print(lines[i])
+        i = i + 1
+    # print(request)
+    request = request.strip()
+    if request.endswith(')'):
+        request = request[:-1]
+    request = request +  '\n'
+    matches = re.findall('^(.+?) \[.+REPORTING] Query Request: (\w+), ((.*\n)*)', request, re.MULTILINE)
+    match = matches[0]
+
+    try:
+        json_data = json.loads(match[2])
+    except:
+        print('Bad data', match[2])
+        print('Request', request, 'XXX')
+
+    entry = {
+        'Text': request,
+        'DateTime': match[0],
+        'Type': 'Request',
+        'Call': match[1],
+        'JSON': json_data
+    }
+    results.append(entry)
+    # print(entry)
+    i = i - 1
+    return i
+
+if __name__ == '__main__':
+    results = process_request_response('output.txt')
+    print(results)
+
