@@ -294,7 +294,7 @@ def compute_part_dimensions(boundingBox):
 
 
 def run_kernel(part_full_path_filename, material, query_type, summary_worksheet, comparison_worksheet,
-               settings, write_part_summary, column_index, machine_filename):
+               settings, write_part_summary, column_index, machine_filename, job_id):
     settings['Query'] = query_type.upper()
     settings['PartFullPathFilename'] = part_full_path_filename
     settings['PartDirectory'], settings['PartFilename'] = os.path.split(part_full_path_filename)
@@ -307,7 +307,7 @@ def run_kernel(part_full_path_filename, material, query_type, summary_worksheet,
 
     context = execute_runKernel(material, material['type'], output_folder, settings['PartName'],
                                 part_full_path_filename,
-                                settings['Query'], machine_filename)
+                                settings['Query'], machine_filename, job_id)
     if context == None:
         return
 
@@ -388,14 +388,13 @@ def write_worksheet_header(worksheet, title, messages):
 
 
 def execute_runKernel(material, material_type, output_folder, part_base_name, part_full_path_filename, query_type,
-                      machine_filename):
+                      machine_filename, job_id):
     if (query_type.lower() == 'formula'):
         command = ['./runKernel', '-i', part_full_path_filename, '-f', output_folder, '-q', query_type.lower(),
                    '-m', material['code']]
     else:
         command = ['./runKernel', '-i', part_full_path_filename, '-f', output_folder, '-q', query_type.lower(),
-                   '-m', material_type
-            , '--machine', machine_filename
+                   '-m', material_type, '--machine', machine_filename, '-j', str(job_id)
                    ]
     command = prefix_command() + command
     # command = command + ['--tools', 'add']
@@ -508,7 +507,7 @@ def print_stl_file(filename):
     minX, maxX, minY, maxY, minZ, maxZ
 
 
-def run_experiment(parts_filenames, materials, query_types, settings, output_folder, machine_filename):
+def run_experiment(parts_filenames, materials, query_types, settings, output_folder, machine_filename, job_id):
     global workbook, title_format, header_format, cell_format, cell_small_format, column_width
 
     output_folders = []
@@ -540,7 +539,7 @@ def run_experiment(parts_filenames, materials, query_types, settings, output_fol
             column_index = 'A'
             for query_type in query_types:
                 output_folder, plans_output, context = run_kernel(part, material, query_type, summary_worksheet, comparison_worksheet, settings,
-                           write_part_summary, column_index, machine_filename)
+                           write_part_summary, column_index, machine_filename, job_id)
                 # for plan in plans_output:
                 #     print(plan[0].strip())
                 #     for i in range(1, len(plan)):
@@ -652,11 +651,11 @@ query_types = [
 settings = {
 }
 
-def run_part(part_filename, material_requested, query, machine_filename):
+def run_part(part_filename, material_requested, query, machine_filename, job_id):
     for material in materials:
         if material['type'] == material_requested:
             material_input = [material]
-    return run_experiment([part_filename], material_input, [query], {}, '/tmp', machine_filename)
+    return run_experiment([part_filename], material_input, [query], {}, '/tmp', machine_filename, job_id)
 
 # run_experiment(parts_filenames, materials, query_types, settings)
 

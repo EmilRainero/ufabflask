@@ -16,6 +16,7 @@ UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = set(['step', 'stp'])
 
+job_id = 0
 lock = Lock()
 
 @app.route('/')
@@ -43,20 +44,25 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def run(full_filename, material, query, machine_filename):
-    print('acquiring lock')
-    lock.acquire()
-    print('got lock')
+    global job_id
+    print('JOBID:', job_id)
+    job_id = job_id + 1
+
+    # print('acquiring lock')
+    # lock.acquire()
+    # print('got lock')
     save_directory = os.getcwd()
     os.chdir('/ufab/uFab-kernel/uFab.kernel/buildsOptimized/bin')
 
-    output_folders, plans_output = run_part(full_filename, material, query, machine_filename)
+    output_folders, plans_output = run_part(full_filename, material, query, machine_filename, job_id)
     part_directory, part_filename = os.path.split(full_filename)
     part_base_name, part_extension = os.path.splitext(part_filename)
     part_excel = os.path.join(part_directory, part_base_name) + '.xlsx'
 
     os.chdir(save_directory)
-    print('releasing lock')
-    lock.release()
+    # print('releasing lock')
+    # lock.release()
+
     output_folder = output_folders[0][0]
     output_data = output_folders[0][1]
     output_text = output_data['Output']
