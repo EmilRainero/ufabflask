@@ -19,6 +19,19 @@ ALLOWED_EXTENSIONS = set(['step', 'stp'])
 job_id = 0
 lock = Lock()
 
+@app.after_request
+def add_header(r):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also to cache the rendered page for 10 minutes.
+    """
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    r.headers['Cache-Control'] = 'public, max-age=0'
+    return r
+
+
 @app.route('/')
 def hello_world(name=None):
     return render_template('index.html', name=name)
@@ -72,10 +85,10 @@ def run(full_filename, material, query, machine_filename):
     output_filename = os.path.join(output_folder, 'output.txt')
     with open(output_filename, 'w') as file:
         file.write(output_text)
-    # data = process_request_response(output_filename)
-    # output_filename = os.path.join(output_folder, 'request_response.txt')
-    # with open(output_filename, 'w') as file:
-    #     file.write(data)
+    data = process_request_response(output_filename)
+    output_filename = os.path.join(output_folder, 'request_response.txt')
+    with open(output_filename, 'w') as file:
+        file.write(data)
 
     return part_excel, output_folder, plans_output
 

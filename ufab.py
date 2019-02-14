@@ -679,8 +679,8 @@ def html_summary(folder, excel_filename):
     url = "file/" + folder + '/' + 'output.txt'
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Output</a>'
 
-    # url = "file/" + folder + '/' + 'request_response.txt'
-    # html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Request/Response</a>'
+    url = "file/" + folder + '/' + 'request_response.txt'
+    html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >View Request/Response</a>'
 
     url = "preview/" + folder + '/' + 'voxpart.stl'
     html = html + '&nbsp;&nbsp;&nbsp;<a href="' + url + '" target="_blank" >Preview</a>'
@@ -831,10 +831,17 @@ def process_tool(tool):
                 elif 'Vfm' in element:
                     tool_details = tool_details + 'Vfm {0} '.format(element['Vfm'])
                 tool_details = tool_details + ', '
-    return tool_details[:-3]
+    tool_details = tool_details + '{0}'.format(tool['cuttingData']['RecommendedTools']['CuttingTool'][0]['OrderCode'])
+    tool_details = tool_details + ', {0}'.format(tool['MaterialId'])
+    return tool_details
 
 def process_array_of_tools(tools):
     result = []
+    # tools.sort(key=lambda x: x['diameter'])
+    if isinstance(tools, list):
+        # print()
+        # print(tools)
+        tools = sorted(tools, key=lambda x: (x['diameter'], x['depthMax']))
     for tool in tools:
         result.append(process_tool(tool))
     return result
@@ -860,6 +867,12 @@ def process_response(i, line, lines, results):
     json_data = None
     try:
         json_data = json.loads(match[1])
+        json_data = [x for x in json_data if isinstance(x, dict)]
+        # print('Response', response)
+        # print()
+        # print('Match', match[1])
+        # print()
+        # print()
     except:
         print('Bad data', match[1])
 
