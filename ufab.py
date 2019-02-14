@@ -33,8 +33,8 @@ def get_operating_system():
 
 def prefix_command():
     prefix = []
-    # if get_operating_system() == 'Linux':
-    #     prefix = ['xvfb-run', '--auto-servernum', '--server-num=99', '--server-args=-screen 0 1024x768x24']
+    if get_operating_system() == 'linux':
+        prefix = ['xvfb-run', '--auto-servernum', '--server-args=-screen 0 1024x768x24']
     return prefix
 
 
